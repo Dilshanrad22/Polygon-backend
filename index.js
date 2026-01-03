@@ -234,12 +234,13 @@ app.get('/api/auth/me', authenticateToken, async (req, res) => {
 
 /**
  * GET /api/investments
- * Returns list of all investments ordered by created_at descending
+ * Returns list of user's investments ordered by created_at descending
  */
-app.get('/api/investments', async (req, res) => {
+app.get('/api/investments', authenticateToken, async (req, res) => {
   try {
     const [rows] = await pool.execute(
-      'SELECT id, farmer_name, amount, crop, created_at FROM investments ORDER BY created_at DESC'
+      'SELECT id, farmer_name, amount, crop, created_at FROM investments WHERE user_id = ? ORDER BY created_at DESC',
+      [req.user.id]
     );
     res.json(rows);
   } catch (error) {
@@ -250,9 +251,9 @@ app.get('/api/investments', async (req, res) => {
 
 /**
  * POST /api/investments
- * Creates a new investment record
+ * Creates a new investment record for the authenticated user
  */
-app.post('/api/investments', async (req, res) => {
+app.post('/api/investments', authenticateToken, async (req, res) => {
   try {
     const { farmer_name, amount, crop } = req.body;
     
@@ -264,8 +265,8 @@ app.post('/api/investments', async (req, res) => {
     
     // Insert into database using parameterized query
     const [result] = await pool.execute(
-      'INSERT INTO investments (farmer_name, amount, crop) VALUES (?, ?, ?)',
-      [farmer_name.trim(), Number(amount), crop.trim()]
+      'INSERT INTO investments (farmer_name, amount, crop, user_id) VALUES (?, ?, ?, ?)',
+      [farmer_name.trim(), Number(amount), crop.trim(), req.user.id]
     );
     
     // Fetch and return the created row
